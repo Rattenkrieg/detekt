@@ -29,6 +29,35 @@ class FriendPathArgsSpec {
     }
 
     @Test
+    fun `passes existing files and directories in order`(@TempDir tempDir: File) {
+        val classes = File(tempDir, "classes").apply { mkdir() }
+        val missing = File(tempDir, "disabled.jar")
+        val jar = File(tempDir, "main.jar").apply { createNewFile() }
+        val project = ProjectBuilder.builder().withProjectDir(tempDir).build()
+
+        val actual = FriendPathArgs(project.files(classes, missing, jar)).toArgument()
+
+        assertThat(actual).containsExactly("-Xfriend-paths", "${classes.absolutePath},${jar.absolutePath}")
+    }
+
+    @Test
+    fun `checks friend paths when arguments are generated`(@TempDir tempDir: File) {
+        val output = File(tempDir, "main.jar")
+        val project = ProjectBuilder.builder().withProjectDir(tempDir).build()
+        val subject = FriendPathArgs(project.files(output))
+
+        assertThat(subject.toArgument()).isEmpty()
+
+        output.createNewFile()
+
+        assertThat(subject.toArgument()).containsExactly("-Xfriend-paths", output.absolutePath)
+
+        output.delete()
+
+        assertThat(subject.toArgument()).isEmpty()
+    }
+
+    @Test
     fun `passes nothing when no path exists`(@TempDir tempDir: File) {
         val missing = File(tempDir, "disabled.jar")
         val project = ProjectBuilder.builder().withProjectDir(tempDir).build()
